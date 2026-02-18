@@ -1,0 +1,37 @@
+# Environments
+venv/
+.env
+
+# Python caching
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Data (Too large for GitHub)
+data/
+EasyEdit/data/
+
+# Logs & Results
+logs/
+results/
+outputs/
+*.err
+*.out
+*.log
+
+# Debug & Temporary JSONs
+debug_wise_*.json
+*.intermediate.json
+
+# Reports
+*.docx
+*.pdf
+*.html
+
+# IDEs & System
+.DS_Store
+.vscode/
+.idea/
+.antigravity/
+.gemini/
