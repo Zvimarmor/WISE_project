@@ -23,7 +23,8 @@ outputs/
 # Debug & Temporary JSONs
 debug_wise_*.json
 *.intermediate.json
-
+check_squeue.py
+*.txt
 # Reports
 *.docx
 *.pdf

@@ -3,22 +3,29 @@
 #SBATCH --mem=64g
 #SBATCH --time=24:00:00
 #SBATCH --job-name=WISE_Lab_Data_Run
-#SBATCH --error=/ems/elsc-labs/sompolinsky-h/zvi.marmor/WISE_Lab_Project/logs/wise_lab_%A_%a.err
-#SBATCH --output=/ems/elsc-labs/sompolinsky-h/zvi.marmor/WISE_Lab_Project/logs/wise_lab_%A_%a.out
+#SBATCH --error=wise_lab_%A_%a.err
+#SBATCH --output=wise_lab_%A_%a.out
 #SBATCH --partition=ss.gpu
 #SBATCH --gres=gpu:1
 #SBATCH --constraint="RTX6000ada"
 #SBATCH --cpus-per-task=8
+#SBATCH --mail-type=END,FAIL
+#SBATCH --mail-user=zvi.marmor@mail.huji.ac.il
 
 # 1. Environment Setup
 module load python/3.11.13
 
-PROJECT_ROOT="/ems/elsc-labs/sompolinsky-h/zvi.marmor/WISE_Lab_Project"
+# Using absolute path to avoid Slurm spooling issues with relative detection
+PROJECT_ROOT="/ems/elsc-labs/sompolinsky-h/zvi.marmor/WISE_Lab"
+WORKING_PROJECT="/ems/elsc-labs/sompolinsky-h/zvi.marmor/WISE_Lab_Project"
+echo "Project Root: $PROJECT_ROOT"
 
-if [ -f "$PROJECT_ROOT/venv/bin/activate" ]; then
+if [ -f "$WORKING_PROJECT/venv/bin/activate" ]; then
+    source "$WORKING_PROJECT/venv/bin/activate"
+elif [ -f "$PROJECT_ROOT/venv/bin/activate" ]; then
     source "$PROJECT_ROOT/venv/bin/activate"
 else
-    echo "Warning: venv not found at $PROJECT_ROOT/venv. Please create it."
+    echo "Virtual environment not found in either $PROJECT_ROOT or $WORKING_PROJECT!"
     exit 1
 fi
 

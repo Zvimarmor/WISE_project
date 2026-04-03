@@ -22,6 +22,11 @@ class NpEncoder(json.JSONEncoder):
         return super(NpEncoder, self).default(obj)
 
 def debug_wise():
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--num_samples', type=int, default=250, help='Number of samples to run (0 for all)')
+    args = parser.parse_args()
+
     # 1. Load Config
     hparams_path = 'EasyEdit/hparams/WISE/gpt-j-6B.yaml'
     print(f"Loading config from {hparams_path}")
@@ -52,9 +57,14 @@ def debug_wise():
     random.seed(42)
     random.shuffle(data)
     
-    # Select first 250
-    data = data[:250]
-    print(f"Selected 250 random samples from {len(data)} total.")
+    # Select samples
+    if args.num_samples > 0:
+        data = data[:args.num_samples]
+        num_s = args.num_samples
+    else:
+        num_s = len(data)
+
+    print(f"Selected {num_s} random samples from total dataset.")
 
     prompts = [r['prompt'] for r in data]
     targets = [r['target_new'] for r in data]
@@ -153,7 +163,8 @@ def debug_wise():
     )
 
     # 5. Save detailed output
-    output_file = 'debug_wise_rand250.json'
+    suffix = f"rand{args.num_samples}" if args.num_samples > 0 else "full"
+    output_file = f"debug_wise_{suffix}.json"
     print(f"Attempting to save final results to {output_file}...")
     try:
         with open(output_file, 'w') as f:
