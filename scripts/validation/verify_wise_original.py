@@ -42,8 +42,9 @@ def verify_wise_original():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_path', type=str, default='data/hallucination/wikibio-test-all.json', help='Path to the dataset (json)')
-    parser.add_argument('--output_name', type=str, default='validation_results')
-    parser.add_argument('--max_samples', type=int, default=200, help='Maximum number of samples to evaluate.')
+    parser.add_argument('--results_folder', type=str, default='results/default_run', help='Folder to save results.')
+    parser.add_argument('--output_name', type=str, default='results', help='Filename for the JSON output.')
+    parser.add_argument('--num_samples', type=int, default=200, help='Maximum number of samples to evaluate.')
     parser.add_argument('--add_eos', action='store_true', help='Append <|endoftext|> to target strings.')
     args, unknown = parser.parse_known_args()
 
@@ -59,8 +60,8 @@ def verify_wise_original():
     # Selection logic
     random.seed(42)
     random.shuffle(data)
-    num_samples = min(args.max_samples, len(data))
-    samples = data[:num_samples]
+    num_samples = min(args.num_samples, len(data))
+    samples = data[:num_samples] if 'temporal' in data_path.lower() or 'extrap' in data_path.lower() else random.sample(data, num_samples)
     print(f"Selected {num_samples} samples for validation.")
 
     def get_val(r, keys):
@@ -229,10 +230,9 @@ def verify_wise_original():
             print(f"Processed {i+1}/{num_samples} edits...")
 
     # 7. Save Results
-    res_dir = 'results/running_original-WISE_9.3.26'
-    if 'temporal' in data_path.lower():
-        res_dir = 'results/temporal_validation'
-    
+    res_dir = args.results_folder
+    os.makedirs(res_dir, exist_ok=True)
+
     base_out = os.path.join(res_dir, args.output_name)
     os.makedirs(res_dir, exist_ok=True)
     

@@ -2,11 +2,13 @@
 #SBATCH --job-name=gptj_30
 #SBATCH --output=gptj_30_%j.out
 #SBATCH --error=gptj_30_%j.err
-#SBATCH --time=03:00:00
-#SBATCH --mem=64G
-#SBATCH --cpus-per-task=8
-#SBATCH --gres=gpu:1
+#SBATCH --account=ss-labs
 #SBATCH --partition=ss.gpu
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=64g
+#SBATCH --gres=gpu:rtx6000ada:1
+#SBATCH --exclude=elscn-[60-64]
+#SBATCH --time=04:00:00
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=zvi.marmor@mail.huji.ac.il
 
@@ -35,7 +37,7 @@ $PYTHON -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab')"
 # Execution command for the 30-story sequential memory test
 $PYTHON scripts/validation/verify_wise_original.py \
     --hparams_dir EasyEdit/hparams/WISE/gpt-j-6B.yaml \
-    --data_file data/temporal/custom_temporal_2023.json \
+    --data_path data/temporal/custom_temporal_2023.json \
     --num_samples 30 \
     --results_folder results/gptj_sequential_retention_30 \
     --add_eos
