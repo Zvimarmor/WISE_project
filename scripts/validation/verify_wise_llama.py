@@ -90,23 +90,7 @@ def verify_wise_llama():
 
     loc_prompts = [get_loc_prompt(r) for r in samples]
 
-    # 3. Patch for Generation (Ensuring Chat Template is used)
-    from easyeditor.evaluate import evaluate_utils
-    import easyeditor.evaluate as eval_pkg
-    
-    def patched_test_generation_quality(model, tok, prefixes, max_out_len, vanilla_generation=False):
-        # Apply Llama Chat Template to prefixes
-        chat_prefixes = []
-        for p in prefixes:
-            chat = [{"role": "user", "content": p}]
-            # apply_chat_template returns a string if tokenize=False and add_generation_prompt=True
-            templated = tok.apply_chat_template(chat, tokenize=False, add_generation_prompt=True)
-            chat_prefixes.append(templated)
-        
-        gen_texts = evaluate_utils.generate_fast(model, tok, chat_prefixes, n_gen_per_prompt=1, max_out_len=300, vanilla_generation=True)
-        return {"ngram_entropy": 0.0, "generated_text": gen_texts}
-        
-    evaluate_utils.test_generation_quality = patched_test_generation_quality
+    # Removed buggy Tokenizer Chat Template patching. Llama 3 will run on standard text completion using 0.1 LR.
 
     # 4. Initialize Editor
     # Force float16 to save memory (especially for Llama-3.1-8B)
