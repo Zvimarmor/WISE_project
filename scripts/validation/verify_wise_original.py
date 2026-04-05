@@ -132,14 +132,14 @@ def verify_wise_original():
         loc_prompts=loc_prompts,
         ground_truth=['<|endoftext|>'] * len(prompts),
         sequential_edit=True,
-        test_generation=True,
+        test_generation=False,
         keep_original_weight=True,
         verbose=False,
         track_first_edit=False
     )
 
-    # 6. Enhanced Metric Calculation
-    print("\nCalculating metrics...")
+    # 6. Global Memory Retention Generation & Metric Calculation
+    print("\nEvaluating final memory retention for all stories...")
     
     if S_TRANSFORMERS_AVAILABLE:
         st_model = SentenceTransformer('all-MiniLM-L6-v2', device='cuda' if torch.cuda.is_available() else 'cpu')
@@ -147,24 +147,37 @@ def verify_wise_original():
     if ROUGE_AVAILABLE:
         scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
 
-    # Pre-calculate Batch Semantic Similarity (Optimization)
-    print("Performing Batch Semantic Similarity analysis...")
+    # Generate all texts at once using the final model state
+    editor.model.eval()
     all_gen_texts = []
     all_targets = []
-    for m in metrics:
+    
+    print("Generating responses from final model state...")
+    for i, m in enumerate(metrics):
         prompt = m['requested_rewrite']['prompt']
-        # Extract generated text
-        post = m.get('post', {})
-        fluency = post.get('fluency', {})
-        gen_list = fluency.get('generated_text', [""])
-        gen_text = gen_list[0] if isinstance(gen_list, list) else gen_list
+        target = m['requested_rewrite']['target_new']
+        
+        # Extrinsic vanilla generation over the final model
+        gen_output = evaluate_utils.generate_fast(editor.model, editor.tok, [prompt], n_gen_per_prompt=1, max_out_len=300, vanilla_generation=True)
+        gen_text = gen_output[0] if gen_output else ""
+        
+        # Cleanup
         if gen_text.startswith(prompt):
             gen_text = gen_text[len(prompt):].strip()
         else:
             gen_text = gen_text.strip()
-        
+            
         all_gen_texts.append(gen_text)
-        all_targets.append(m['requested_rewrite']['target_new'])
+        all_targets.append(target)
+        
+        # Inject the final generated text back into the metrics dictionary for the JSON dump
+        if 'post' not in m:
+            m['post'] = {}
+        if 'fluency' not in m['post']:
+            m['post']['fluency'] = {}
+        m['post']['fluency']['generated_text'] = [gen_text]
+
+    print("Performing Batch Semantic Similarity analysis...")
 
     similarities = []
     if S_TRANSFORMERS_AVAILABLE:
