@@ -120,7 +120,7 @@ def generate_fast(
     if vanilla_generation:
         eos_id = tok.eos_token_id
         # Define extrinsic stop strings (common for base models)
-        default_stop_strings = ["\n\n", "User:", "Question:", ".\n", "\t", "\n ", " #", "<|eot_id|>"]
+        default_stop_strings = ["User:", "Question:", " #", "<|eot_id|>", "\t"]
         combined_stop_strings = default_stop_strings + (stop_strings if stop_strings else [])
         stopping_criteria = StoppingCriteriaList([StopAtStringsCriteria(combined_stop_strings, tok)])
 
