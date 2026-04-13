@@ -2,9 +2,9 @@ alg_name: "WISE"
 model_name: "EleutherAI/gpt-j-6B"
 device: 0
 
-mask_ratio: 0.2
-edit_lr: 1.0
-n_iter: 70
+mask_ratio: 0.01
+edit_lr: 0.01
+n_iter: 150
 norm_constraint: 1.0
 act_margin: [15.0, 40.0, 20.0] # alpha, beta, gamma
 act_ratio: 0.88

@@ -90,10 +90,10 @@ def _prepare_requests(prompts: Union[str, List[str]],
             kwargs['subject'] = [kwargs['subject'],]
         else:
             assert len(kwargs['subject']) == len(prompts)
-        for prompt_, subject_ in zip(prompts, kwargs['subject']):
-            if subject_ not in prompt_:
-                print(f'Warning: Subject "{subject_}" does not appear in prompt: "{prompt_}"')
-                # This is expected for QA datasets where prompts are questions
+        # for prompt_, subject_ in zip(prompts, kwargs['subject']):
+        #     if subject_ not in prompt_:
+        #         print(f'Warning: Subject "{subject_}" does not appear in prompt: "{prompt_}"')
+        #         # This is expected for QA datasets where prompts are questions
 
         for i, request in enumerate(requests):
             request.update(

@@ -1,13 +1,12 @@
 #!/bin/bash
 #SBATCH --account=ss-labs
-#SBATCH --job-name=wise_wiki_200
-#SBATCH --partition=ss.gpu
-#SBATCH --output=wiki_200_%j.out
-#SBATCH --error=wiki_200_%j.err
+#SBATCH --job-name=wise_xu_200
+#SBATCH --partition=haim.gpu
+#SBATCH --output=xu_200_%j.out
+#SBATCH --error=xu_200_%j.err
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
 #SBATCH --gres=gpu:1
-#SBATCH --constraint="RTX6000ada"
 #SBATCH --time=24:00:00
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=zvi.marmor@mail.huji.ac.il
@@ -39,7 +38,8 @@ $VENV_PIP install rouge-score sentence-transformers
 export PYTHONPATH=$PROJECT_ROOT/EasyEdit:$PYTHONPATH
 cd $PROJECT_ROOT
 
-echo "Starting 200-story Temporal validation run..."
+echo "Starting 10-edit diagnostic run (learning process fixes)..."
 $VENV_PYTHON scripts/validation/verify_wise_original.py \
-    --data_path data/temporal/temporal-edit.json \
-    --output_name temporal_validation_200
+    --data_path data/Xu\'s_data/xu_dataset_1000_wise.json \
+    --num_samples 10 \
+    --output_name xu_10_learning_fixes

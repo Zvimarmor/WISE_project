@@ -149,7 +149,7 @@ class WISE(torch.nn.Module):
         setattr(eval(f"self.model.{self.layer}"), "editing", True)
         self.get_adapter_layer().set_parameter_tunable()
         if getattr(eval(f"self.model.{self.layer}"), "editing_total_cnt") % self.config.save_freq == 0:
-            self.get_adapter_layer().generate_activation_mask(self.config.mask_ratio)
+            self.get_adapter_layer().generate_non_overlapping_mask(self.config.mask_ratio)
 
         # --- train Wise value ---
         loss_meter = EarlyStopMeter()
@@ -158,7 +158,7 @@ class WISE(torch.nn.Module):
 
             if i == 0:
                 # --- we only need to create an optimizer for the first iteration (but forward pass instantiates the key, so optimzer is passed after first inference) ---
-                optimizer = torch.optim.SGD([self.get_adapter_layer().new_weight], config.edit_lr, weight_decay=1e-5)
+                optimizer = torch.optim.Adam([self.get_adapter_layer().new_weight], lr=config.edit_lr, weight_decay=1e-5)
 
             ft_loss = self._cal_ft_loss(tokens, last_prompt_token_loc)
 
@@ -224,12 +224,15 @@ class WISE(torch.nn.Module):
                 )
 
             optimizer.step()
-            loss_meter.update(loss.item())
+            loss_meter.update(ft_loss.item())  # Fix: track ft_loss (not total) so training continues until the fact is learned
 
             if type(self.config.norm_constraint) is float:
                 self._norm_constraint(self.config.norm_constraint)
             
             loss_history.append(loss.item())
+
+        # --- Convergence diagnostic ---
+        print(f"✅ Edit converged: ft_loss={ft_loss.item():.4f}, total_loss={loss.item():.4f}, iterations={i+1}/{config.n_iter}", flush=True)
 
         # --- pull out info we want to log from the Wise layer ---
         setattr(eval(f"self.model.{self.layer}"), "editing", False)
@@ -581,6 +584,7 @@ class WISEAdapter(torch.nn.Module):
             # 3. Sticky Trigger: Save WHICH memory won to avoid sequential collisions
             if id(layer_out) != id(original_layer_output):
                 if getattr(self.config, 'sticky_routing', False):
+                    print(f"DEBUG: Model thinks sticky_routing is {getattr(self.config, 'sticky_routing', False)}", flush=True)
                     self.sticky_active = True
                     # Identify if it was the latest edit or a previous one
                     if id(layer_out) == id(new_weight_layer_output):

@@ -256,6 +256,8 @@ def test_prediction_acc(model, tok, hparams, prompts, targets, device, locality=
                 max_new_tokens=len(target_new_tokens),
                 pad_token_id=tok.eos_token_id,
                 do_sample=False,
+                temperature=0.0,
+                top_p=1.0,
                 use_cache=False,
             )
             if locality:
@@ -354,6 +356,7 @@ def test_generation_quality(
     prefixes: typing.List[str],
     max_out_len: int,
     vanilla_generation: bool = False,
+    stop_strings: typing.List[str] = None,
 ):
     # --- RESET STICKY ROUTING FLAG ---
     for name, module in model.named_modules():
@@ -368,6 +371,7 @@ def test_generation_quality(
         n_gen_per_prompt=1,
         max_out_len=max_out_len,
         vanilla_generation=vanilla_generation,
+        stop_strings=stop_strings,
     )
 
     if NLTK_AVAILABLE:
