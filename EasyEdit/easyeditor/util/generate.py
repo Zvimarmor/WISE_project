@@ -98,6 +98,7 @@ def generate_fast(
     top_k: int = 5,
     max_out_len: int = 300,
     vanilla_generation=False,
+    stop_strings=None,
 ):
     """
     Fast, parallelized auto-regressive text generation with top-k sampling.
@@ -109,12 +110,19 @@ def generate_fast(
     inp_tok = tok(inp, padding=True, return_tensors="pt").to(
         next(model.parameters()).device
     )
+    
+    # Makes sure that the sticky routing is reset for each generation
+    for name, module in model.named_modules():
+        if hasattr(module, 'sticky_active'):
+            module.sticky_active = False
+    
     input_ids, attention_mask = inp_tok["input_ids"], inp_tok["attention_mask"]
     if vanilla_generation:
         eos_id = tok.eos_token_id
         # Define extrinsic stop strings (common for base models)
-        stop_strings = ["\n\n", "User:", "Question:", ".\n", "\t", "\n ", " #", "<|eot_id|>"]
-        stopping_criteria = StoppingCriteriaList([StopAtStringsCriteria(stop_strings, tok)])
+        default_stop_strings = ["\n\n", "User:", "Question:", ".\n", "\t", "\n ", " #", "<|eot_id|>"]
+        combined_stop_strings = default_stop_strings + (stop_strings if stop_strings else [])
+        stopping_criteria = StoppingCriteriaList([StopAtStringsCriteria(combined_stop_strings, tok)])
 
         gen_tokens = model.generate(
             input_ids=input_ids,

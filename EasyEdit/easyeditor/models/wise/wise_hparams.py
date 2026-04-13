@@ -34,10 +34,11 @@ class WISEHyperParams(HyperParams):
 
     # Defaults
     batch_size: int = 1
-    max_length: int = 30
+    max_length: int = 128
     model_parallel: bool = False
     fp16: bool = False
     use_chat_template: bool = False
+    sticky_routing: bool = False
 
     # Save and Load
     save_path: str = None

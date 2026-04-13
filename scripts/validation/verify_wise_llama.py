@@ -38,7 +38,7 @@ def verify_wise_llama():
 
     hparams = WISEHyperParams.from_hparams(hparams_path)
     hparams.sequential_edit = True
-    hparams.sticky_routing = True
+    hparams.sticky_routing = False
     hparams.use_chat_template = True  # CRITICAL for Instruct models
     
     # 2. Data Loading

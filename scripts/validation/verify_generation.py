@@ -44,7 +44,7 @@ def verify_generation():
         
         # Override the act_ratio in the hyperparameters
         hparams.act_ratio = ratio
-        hparams.sticky_routing = True
+        hparams.sticky_routing = False
         
         # Initialize a FRESH editor for each sweep to avoid state pollution
         editor = BaseEditor.from_hparams(hparams)

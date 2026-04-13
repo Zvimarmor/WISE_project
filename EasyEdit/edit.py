@@ -2930,7 +2930,7 @@ def test_WISE():
         loc_prompts=loc_prompts,
         locality_inputs=locality_inputs,
         portability_inputs=portability_inputs,
-        sequential_edit=True
+        sequential_edit=False
     )
 
     import pdb

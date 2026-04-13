@@ -2,12 +2,13 @@ import json
 import os
 import sys
 import random
+import string
 import torch
 import numpy as np
 from tqdm import tqdm
 
 # Add EasyEdit to path
-sys.path.append('EasyEdit')
+sys.path.insert(0, os.path.abspath('EasyEdit'))
 from easyeditor import BaseEditor, WISEHyperParams
 
 # Optional imports for better metrics
@@ -36,16 +37,18 @@ def verify_wise_original():
     hparams = WISEHyperParams.from_hparams(hparams_path)
     hparams.sequential_edit = True
     hparams.act_ratio = 0.8  # Robust ratio for GPT-J
-    hparams.sticky_routing = True
+    hparams.sticky_routing = False
+    print(f"DEBUG: hparams.sticky_routing is set to: {hparams.sticky_routing}", flush=True)
     
     # 2. Data Loading
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_path', type=str, default='data/hallucination/wikibio-test-all.json', help='Path to the dataset (json)')
-    parser.add_argument('--results_folder', type=str, default='results/default_run', help='Folder to save results.')
-    parser.add_argument('--output_name', type=str, default='results', help='Filename for the JSON output.')
-    parser.add_argument('--num_samples', type=int, default=200, help='Maximum number of samples to evaluate.')
-    parser.add_argument('--add_eos', action='store_true', help='Append <|endoftext|> to target strings.')
+    parser.add_argument('--hparams_dir', type=str, default='EasyEdit/hparams/WISE/gpt-j-6B.yaml', help='Path to hparams file')
+    parser.add_argument('--add_eos', action='store_true', help='If added, appends <|endoftext|> to end of generation')
+    parser.add_argument('--num_samples', '--max_samples', type=int, default=30, help='Maximum number of samples to evaluate.')
+    parser.add_argument('--output_name', type=str, default='validation_results', help='Output base filename')
+    parser.add_argument('--results_folder', type=str, default='results', help='Folder to store output JSONs')
     args, unknown = parser.parse_known_args()
 
     data_path = args.data_path
@@ -112,10 +115,10 @@ def verify_wise_original():
         import importlib
         evaluate_module = importlib.import_module('easyeditor.evaluate.evaluate')
 
-    def patched_test_generation_quality(model, tok, prefixes, max_out_len, vanilla_generation=False):
+    def patched_test_generation_quality(model, tok, prefixes, max_out_len, vanilla_generation=False, stop_strings=None):
         if not hasattr(model, 'name_or_path'): model.name_or_path = 'gpt-j'
         # Updated to 300 tokens as requested
-        gen_texts = evaluate_utils.generate_fast(model, tok, prefixes, n_gen_per_prompt=1, max_out_len=300, vanilla_generation=True)
+        gen_texts = evaluate_utils.generate_fast(model, tok, prefixes, n_gen_per_prompt=1, max_out_len=max_out_len, vanilla_generation=vanilla_generation, stop_strings=stop_strings)
         return {"ngram_entropy": 0.0, "generated_text": gen_texts}
         
     evaluate_utils.test_generation_quality = patched_test_generation_quality
@@ -157,9 +160,30 @@ def verify_wise_original():
     for i, m in enumerate(metrics):
         prompt = m['requested_rewrite']['prompt']
         target = m['requested_rewrite']['target_new']
+        subject = m['requested_rewrite'].get('subject', '')
+        
+        # # Strategy B: Enrich generation prompt with subject cue
+        # gen_prompt = f"According to Wikipedia, {subject}: {prompt}" if subject else prompt
+        gen_prompt = prompt
+        
+        # Calculate dynamic generation constraints to prevent rambling
+        target_tokens = editor.tok.encode(target, add_special_tokens=False)
+        target_len = len(target_tokens) + 15  # Buffer for natural phrasing
+        
+        # Stop after the last word of the target
+        last_word = target.strip().split()[-1].strip(string.punctuation) if target.strip() else None
+        dynamic_stop = [last_word] if last_word else None
         
         # Extrinsic vanilla generation over the final model
-        gen_output = evaluate_utils.generate_fast(editor.model, editor.tok, [prompt], n_gen_per_prompt=1, max_out_len=300, vanilla_generation=True)
+        gen_output = evaluate_utils.generate_fast(
+            editor.model, 
+            editor.tok, 
+            [gen_prompt], 
+            n_gen_per_prompt=1, 
+            max_out_len=target_len, 
+            vanilla_generation=True,
+            stop_strings=dynamic_stop
+        )
         gen_text = gen_output[0] if gen_output else ""
         
         # Cleanup
@@ -200,10 +224,20 @@ def verify_wise_original():
         target = m['requested_rewrite']['target_new']
         gen_text = all_gen_texts[i]
 
-        # Step-specific metrics (Commented out to save time)
-        # teacher_acc = post.get('rewrite_acc', [0.0])
-        # teacher_acc = teacher_acc[0] if isinstance(teacher_acc, list) else teacher_acc
-        teacher_acc = -1.0 
+        # Calculate teacher-forcing accuracy for Haim
+        try:
+            acc_list = evaluate_utils.test_prediction_acc(
+                editor.model, 
+                editor.tok, 
+                hparams, 
+                [prompt], 
+                [target], 
+                device= editor.model.device.index if editor.model.device.type == 'cuda' else 'cpu'      
+            )
+            teacher_acc = float(acc_list[0]) if acc_list else 0.0
+        except Exception as e:
+            print(f"Warning: Could not calculate teacher acc for {subject}: {e}")
+            teacher_acc = -1.0
         
         row = {
             "step": i,
